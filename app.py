@@ -236,7 +236,7 @@ def render_results(result: dict[str, Any], filename: str, log_messages: list[str
                     "Description": item.get("item_description", ""),
                     "MPN": item.get("manufacturer_part_number") or "—",
                     "Original UOM": item.get("original_uom") or "—",
-                    "Pack Qty": item.get("detected_pack_quantity") if item.get("detected_pack_quantity") is not None else "—",
+                    "Pack Qty": str(item.get("detected_pack_quantity")) if item.get("detected_pack_quantity") is not None else "—",
                     "Base UOM": item.get("canonical_base_uom") or "—",
                     "Price/Base Unit": f"${item['price_per_base_unit']:.4f}" if item.get("price_per_base_unit") is not None else "—",
                     "Confidence": f"{conf:.0%}" if isinstance(conf, (int, float)) else str(conf),
@@ -247,7 +247,7 @@ def render_results(result: dict[str, Any], filename: str, log_messages: list[str
             df = pd.DataFrame(rows)
             st.dataframe(
                 df,
-                use_container_width=True,
+                width=None,
                 hide_index=True,
                 height=min(500, 40 + len(rows) * 35),
                 column_config={
@@ -296,7 +296,6 @@ def render_results(result: dict[str, Any], filename: str, log_messages: list[str
                 data=csv_data,
                 file_name=f"{Path(filename).stem}_results.csv",
                 mime="text/csv",
-                use_container_width=True,
             )
         with dl2:
             json_str = json.dumps(result, indent=2, default=str)
@@ -305,7 +304,6 @@ def render_results(result: dict[str, Any], filename: str, log_messages: list[str
                 data=json_str,
                 file_name=f"{Path(filename).stem}_results.json",
                 mime="application/json",
-                use_container_width=True,
             )
     else:
         st.warning(
@@ -328,7 +326,7 @@ def render_results(result: dict[str, Any], filename: str, log_messages: list[str
     if log_messages:
         with st.expander(f"📝 **Processing Logs** ({len(log_messages)} entries)", expanded=False):
             # Show last 5 by default, all available inside
-            display_logs = log_messages[-5:] if len(log_messages) > 5 else log_messages
+            display_logs = list(log_messages[-5:]) if len(log_messages) > 5 else log_messages
             for log in display_logs:
                 st.markdown(f"✅ {log}")
             if len(log_messages) > 5:
