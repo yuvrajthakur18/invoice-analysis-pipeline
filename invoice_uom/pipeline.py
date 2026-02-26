@@ -459,9 +459,25 @@ def _items_look_bad(items: list[dict[str, Any]]) -> bool:
     - Most descriptions are too short (codes only, no real descriptions)
     - Most items have no UOM
     - Descriptions contain obvious noise patterns
+    - BUT: a single item with a real description + price is VALID
     """
     if not items:
         return True
+
+    # Special case: if we have 1-3 items that look legitimate, trust them.
+    # A "legitimate" item has a real description (10+ chars) AND at least
+    # one of: quantity, unit_price, or amount.
+    if len(items) <= 3:
+        valid_count = 0
+        for item in items:
+            desc = item.get("item_description", "")
+            has_desc = len(desc) >= 10
+            has_price = item.get("unit_price") is not None or item.get("amount") is not None
+            has_qty = item.get("quantity") is not None
+            if has_desc and (has_price or has_qty):
+                valid_count = valid_count + 1  # type: ignore
+        if valid_count == len(items):
+            return False  # All items look legit
 
     short_desc_count: int = 0
     no_uom_count: int = 0

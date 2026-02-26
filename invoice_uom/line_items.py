@@ -37,13 +37,65 @@ def _clean_cell_value(text: str) -> str:
 
 # ── column-identification keywords ──────────────────────────────────────────
 _COL_PATTERNS: dict[str, list[str]] = {
-    "description": ["desc", "description", "item", "product", "material", "name", "particulars"],
-    "quantity":    ["qty", "quantity", "qnty", "ordered", "shipped", "units"],
-    "uom":         ["uom", "um", "unit", "measure", "u/m", "pack"],
-    "unit_price":  ["unit price", "unit cost", "price", "rate", "unit", "each"],
-    "amount":      ["amount", "total", "ext", "extension", "extended", "line total", "net"],
-    "sku":         ["sku", "item #", "item no", "item number", "stock", "catalog", "cat #", "cat no"],
-    "mpn":         ["mpn", "mfg", "mfr", "manufacturer", "part", "part #", "part no", "mfg #", "mfr part"],
+    "description": [
+        "desc", "description", "item description", "product description",
+        "item", "product", "material", "material description",
+        "name", "particulars", "goods", "service", "services",
+        "commodity", "detail", "details", "line description",
+        "item name", "product name", "article", "merchandise",
+    ],
+    "quantity": [
+        "qty", "quantity", "qnty", "ordered", "shipped", "units",
+        "qty ordered", "qty shipped", "qty received", "qty invoiced",
+        "order qty", "ship qty", "invoice qty",
+        "quantity ordered", "quantity shipped", "quantity invoiced",
+        "pcs", "count", "no of units", "num",
+    ],
+    "uom": [
+        "uom", "um", "u/m", "unit", "measure", "pack",
+        "unit of measure", "unit meas", "selling unit",
+        "purchase unit", "order unit", "pkg", "package",
+        "uom code", "unit of issue", "ui",
+    ],
+    "unit_price": [
+        "unit price", "unit cost", "price", "rate", "each",
+        "price/unit", "cost/unit", "unit amt", "sell price",
+        "invoice price", "net price", "list price",
+        "price each", "price/ea", "cost", "price/hundred",
+        "unit value", "selling price",
+    ],
+    "amount": [
+        "amount", "total", "ext", "extension", "extended",
+        "line total", "net", "ext amount", "extended amount",
+        "ext price", "extended price", "line amount",
+        "total price", "total cost", "net amount", "value",
+        "line value", "inv amount", "invoice amount",
+        "amt", "subtotal", "sub total",
+    ],
+    "sku": [
+        "sku", "item #", "item no", "item number", "item no.",
+        "stock", "catalog", "cat #", "cat no", "catalog #", "catalog no",
+        "stock #", "stock no", "stock number",
+        "vendor item", "vendor #", "vendor no",
+        "supplier item", "supplier #", "supplier no",
+        "customer item", "our item", "our #",
+        "product #", "product no", "product code", "prod #",
+        "item code", "inv item", "material #", "material no",
+        "reference", "ref #", "ref no",
+    ],
+    "mpn": [
+        "mpn", "mfg", "mfr", "manufacturer", "part", "part #", "part no",
+        "mfg #", "mfr part", "mfr #", "mfg part", "mfg no",
+        "manufacturer #", "manufacturer part", "manufacturer no",
+        "vendor part", "oem", "oem #", "oem part",
+        "model", "model #", "model no",
+    ],
+    "line_number": [
+        "line", "line #", "line no", "line no.", "line number",
+        "po line", "po line #", "seq", "seq #", "sequence",
+        "s/n", "sr", "sr no", "sl", "sl no", "no.",
+        "#", "sno", "s.no", "s.no.",
+    ],
 }
 
 
