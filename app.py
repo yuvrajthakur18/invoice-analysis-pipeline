@@ -11,17 +11,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-# ── Set writable cache dirs BEFORE importing any ML libraries ────────────────
-# Streamlit Cloud's site-packages is read-only, so models must go to /tmp/
-_cache = os.path.join(tempfile.gettempdir(), "invoice_pipeline_cache")
-os.makedirs(_cache, exist_ok=True)
-os.environ.setdefault("HF_HOME", os.path.join(_cache, "huggingface"))
-os.environ.setdefault("TORCH_HOME", os.path.join(_cache, "torch"))
-os.environ.setdefault("XDG_CACHE_HOME", _cache)
-os.environ.setdefault("DOCLING_CACHE_DIR", os.path.join(_cache, "docling"))
-# Disable PaddleX model source connectivity check (hangs on cloud)
-os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
-
 import pandas as pd
 import streamlit as st
 
