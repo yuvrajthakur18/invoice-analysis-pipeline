@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "invoice_uom"
+version = "0.1.0"
+description = "Invoice ingestion & line-item extraction pipeline"
+requires-python = ">=3.10"
+dependencies = [
+    "watchdog>=4.0.0",
+    "rapidfuzz>=3.6.0",
+    "google-genai>=1.0.0",
+    "requests>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+]
+
+[project.optional-dependencies]
+ocr = ["paddlepaddle>=2.6.0", "paddleocr>=2.9.0"]
+pdf = ["docling>=2.3.0"]
+dev = ["pytest>=8.0.0"]
+
+[project.scripts]
+invoice-uom = "invoice_uom.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["invoice_uom*"]

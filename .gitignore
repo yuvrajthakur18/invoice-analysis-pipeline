@@ -1,0 +1,44 @@
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# ── Virtual environment ─────────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── Environment / Secrets ───────────────────────────────────
+.env
+.streamlit/secrets.toml
+
+# ── Pipeline outputs (regenerated on each run) ──────────────
+outputs/
+failed/
+logs/
+
+# ── Debug / temporary files ─────────────────────────────────
+gemini_api_error.txt
+gemini_raw_input.txt
+gemini_raw_output_post.json
+debug_summary.json
+*.log
+
+# ── Cache ────────────────────────────────────────────────────
+.cache/
+lookup_cache.db
+.pytest_cache/
+
+# ── IDE / OS ─────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+Thumbs.db
+.DS_Store

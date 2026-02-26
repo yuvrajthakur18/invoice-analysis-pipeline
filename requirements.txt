@@ -1,0 +1,27 @@
+# PDF extraction
+docling>=2.3.0
+
+# OCR fallback
+paddlepaddle>=2.6.0
+paddleocr>=2.9.0
+
+# File watcher
+watchdog>=4.0.0
+
+# Fuzzy string matching
+rapidfuzz>=3.6.0
+
+# Gemini LLM
+google-genai>=1.0.0
+
+# Web scraping for lookup agent
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+
+# Streamlit UI
+streamlit>=1.30.0
+pandas>=2.0.0
+python-dotenv>=1.0.0
+
+# Testing
+pytest>=8.0.0
