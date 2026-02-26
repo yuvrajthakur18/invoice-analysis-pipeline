@@ -89,18 +89,8 @@ st.markdown("""
     .metric-card .value.yellow { color: #f59e0b; }
     .metric-card .value.red    { color: #ef4444; }
 
-    /* Step indicator */
-    .step-row {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        padding: 0.5rem 0;
-        font-size: 0.95rem;
-    }
-    .step-icon { font-size: 1.2rem; }
-    .step-done   { color: #22c55e; }
-    .step-active { color: #667eea; font-weight: 600; }
-    .step-wait   { color: #cbd5e1; }
+    /* Scroll anchor */
+    .scroll-anchor { scroll-margin-top: 2rem; }
 
     /* Footer */
     .footer { text-align: center; padding: 2rem 0 1rem; color: #a0aec0; font-size: 0.82rem; }
@@ -127,9 +117,11 @@ uploaded_files = st.file_uploader(
 
 
 # ── Processing function ─────────────────────────────────────────────────────
-def run_pipeline(uploaded_file: Any) -> dict[str, Any] | None:
-    """Process an uploaded PDF through the full pipeline with visible progress."""
+def run_pipeline(uploaded_file: Any) -> tuple[dict[str, Any] | None, list[str]]:
+    """Process an uploaded PDF. Returns (result, log_messages)."""
     from invoice_uom.pipeline import process_pdf
+
+    log_messages: list[str] = []
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir) / uploaded_file.name
@@ -137,25 +129,14 @@ def run_pipeline(uploaded_file: Any) -> dict[str, Any] | None:
         output_dir = Path(tmp_dir) / "out"
         failed_dir = Path(tmp_dir) / "failed"
 
-        # Progress placeholders
-        progress_bar = st.progress(0, text="Initialising...")
-        step_container = st.container()
-
-        steps_done: list[str] = []
-        total_steps = 5  # extraction, parsing, supplier, llm/enrich, output
+        # Progress bar
+        progress_bar = st.progress(0, text="Initialising pipeline...")
+        total_steps = 5
 
         def _status_cb(msg: str) -> None:
-            steps_done.append(msg)
-            pct = min(int(len(steps_done) / total_steps * 100), 95)
+            log_messages.append(msg)
+            pct = min(int(len(log_messages) / total_steps * 100), 95)
             progress_bar.progress(pct, text=msg)
-
-            # Render step list
-            with step_container:
-                step_container.empty()
-                html = ""
-                for i, s in enumerate(steps_done):
-                    html += f'<div class="step-row"><span class="step-icon step-done">✅</span> {s}</div>'
-                st.markdown(html, unsafe_allow_html=True)
 
         try:
             result = process_pdf(
@@ -166,24 +147,27 @@ def run_pipeline(uploaded_file: Any) -> dict[str, Any] | None:
                 status_cb=_status_cb,
             )
             progress_bar.progress(100, text="✅ Processing complete!")
-            time.sleep(0.3)
+            time.sleep(0.5)
             progress_bar.empty()
-            return result
+            return result, log_messages
         except Exception as exc:
             progress_bar.progress(100, text="❌ Error occurred")
-            st.error(f"Pipeline error: {exc}")
-            return None
+            log_messages.append(f"ERROR: {exc}")
+            return None, log_messages
 
 
-def render_results(result: dict[str, Any], filename: str) -> None:
-    """Render extraction results with accordions and download buttons."""
+def render_results(result: dict[str, Any], filename: str, log_messages: list[str]) -> None:
+    """Render extraction results: supplier → stats → table → JSON → downloads → logs."""
     supplier = result.get("supplier_name", "Unknown")
     items = result.get("line_items", [])
     stats = result.get("stats", {})
     num_items = stats.get("num_items", len(items))
     num_escalations = stats.get("num_escalations", 0)
 
-    # ── Supplier ──────────────────────────────────────────────────────
+    # ── Scroll anchor ─────────────────────────────────────────────────
+    st.markdown(f'<div class="scroll-anchor" id="results-{filename}"></div>', unsafe_allow_html=True)
+
+    # ── Supplier card ─────────────────────────────────────────────────
     st.markdown(f"""
     <div class="supplier-card">
         <div class="label">Detected Supplier</div>
@@ -208,41 +192,65 @@ def render_results(result: dict[str, Any], filename: str) -> None:
 
     st.markdown("")
 
-    # ── Line items accordion ──────────────────────────────────────────
+    # ── Line items table ──────────────────────────────────────────────
     if items:
         with st.expander(f"📋 **Line Items Table** ({num_items} items)", expanded=True):
             rows = []
             for i, item in enumerate(items, 1):
                 conf = item.get("confidence_score", 0)
-                if isinstance(conf, (int, float)):
-                    conf_str = f"{conf:.0%}"
-                else:
-                    conf_str = str(conf)
-                rows.append({
+                escalation = item.get("escalation_flag", False)
+                row = {
                     "#": i,
                     "Description": item.get("item_description", ""),
-                    "SKU": item.get("sku") or "—",
                     "MPN": item.get("manufacturer_part_number") or "—",
-                    "Qty": item.get("quantity") if item.get("quantity") is not None else "—",
-                    "UOM": item.get("uom_raw") or item.get("original_uom") or "—",
-                    "Unit Price": f"${item['unit_price']:.2f}" if item.get("unit_price") is not None else "—",
-                    "Amount": f"${item['amount']:.2f}" if item.get("amount") is not None else "—",
-                    "Confidence": conf_str,
-                })
+                    "Original UOM": item.get("original_uom") or "—",
+                    "Pack Qty": item.get("detected_pack_quantity") if item.get("detected_pack_quantity") is not None else "—",
+                    "Base UOM": item.get("canonical_base_uom") or "—",
+                    "Price/Base Unit": f"${item['price_per_base_unit']:.4f}" if item.get("price_per_base_unit") is not None else "—",
+                    "Confidence": f"{conf:.0%}" if isinstance(conf, (int, float)) else str(conf),
+                    "Escalation": "🚩 Yes" if escalation else "✅ No",
+                }
+                rows.append(row)
 
             df = pd.DataFrame(rows)
             st.dataframe(
                 df,
                 use_container_width=True,
                 hide_index=True,
-                height=min(400, 40 + len(rows) * 35),
+                height=min(500, 40 + len(rows) * 35),
                 column_config={
                     "#": st.column_config.NumberColumn(width="small"),
                     "Description": st.column_config.TextColumn(width="large"),
+                    "Confidence": st.column_config.TextColumn(width="small"),
+                    "Escalation": st.column_config.TextColumn(width="small"),
                 },
             )
 
-        # ── Raw JSON accordion ────────────────────────────────────────
+        # ── Escalated items evidence ──────────────────────────────────
+        escalated_items = [item for item in items if item.get("escalation_flag")]
+        if escalated_items:
+            with st.expander(f"🚩 **Escalated Items Evidence** ({len(escalated_items)} items)", expanded=False):
+                for item in escalated_items:
+                    desc = item.get("item_description", "Unknown")
+                    evidence = item.get("evidence", {})
+                    st.markdown(f"**{desc}**")
+                    ev_data = {
+                        "UOM Evidence": evidence.get("uom_evidence_text") or "—",
+                        "Pack Evidence": evidence.get("pack_evidence_text") or "—",
+                        "LLM Used": "Yes" if evidence.get("llm_call_used") else "No",
+                        "LLM Status": evidence.get("llm_call_status") or "—",
+                        "LLM Reason": evidence.get("llm_call_reason") or "—",
+                        "LLM Attempts": evidence.get("llm_call_attempts", 0),
+                    }
+                    sources = evidence.get("lookup_sources", [])
+                    if sources:
+                        ev_data["Lookup Sources"] = ", ".join(
+                            s.get("url", "") for s in sources if isinstance(s, dict)
+                        ) or "—"
+                    st.json(ev_data, expanded=True)
+                    st.markdown("---")
+
+        # ── Raw JSON output ───────────────────────────────────────────
         with st.expander("🔍 **Raw JSON Output** (click to expand)"):
             st.json(result, expanded=False)
 
@@ -276,7 +284,6 @@ def render_results(result: dict[str, Any], filename: str) -> None:
         )
         with st.expander("🔍 **Raw JSON Output** (diagnostics)"):
             st.json(result, expanded=True)
-
         json_str = json.dumps(result, indent=2, default=str)
         st.download_button(
             "⬇️ Download JSON",
@@ -284,6 +291,31 @@ def render_results(result: dict[str, Any], filename: str) -> None:
             file_name=f"{Path(filename).stem}_results.json",
             mime="application/json",
         )
+
+    # ── Processing logs (collapsible, at the bottom) ──────────────────
+    if log_messages:
+        with st.expander(f"📝 **Processing Logs** ({len(log_messages)} entries)", expanded=False):
+            # Show last 5 by default, all available inside
+            display_logs = log_messages[-5:] if len(log_messages) > 5 else log_messages
+            for log in display_logs:
+                st.markdown(f"✅ {log}")
+            if len(log_messages) > 5:
+                st.markdown(f"_...and {len(log_messages) - 5} earlier entries_")
+                with st.expander("Show all logs"):
+                    for log in log_messages:
+                        st.markdown(f"• {log}")
+
+    # ── Auto-scroll to results ────────────────────────────────────────
+    safe_id = filename.replace(".", "_").replace(" ", "_")
+    st.markdown(
+        f"""
+        <script>
+            const el = document.getElementById('results-{filename}');
+            if (el) {{ el.scrollIntoView({{ behavior: 'smooth', block: 'start' }}); }}
+        </script>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 # ── Main flow ────────────────────────────────────────────────────────────────
@@ -294,12 +326,17 @@ if uploaded_files:
     for uploaded_file in uploaded_files:
         st.markdown(f"### 📄 `{uploaded_file.name}`")
 
-        result = run_pipeline(uploaded_file)
+        result, log_messages = run_pipeline(uploaded_file)
 
         if result is not None:
-            render_results(result, uploaded_file.name)
+            render_results(result, uploaded_file.name, log_messages)
         else:
-            st.error(f"Processing failed for **{uploaded_file.name}**. Check logs for details.")
+            st.error(f"Processing failed for **{uploaded_file.name}**.")
+            # Still show logs for failed files
+            if log_messages:
+                with st.expander(f"📝 **Processing Logs** ({len(log_messages)} entries)", expanded=True):
+                    for log in log_messages:
+                        st.markdown(f"• {log}")
 
         st.markdown("---")
 
