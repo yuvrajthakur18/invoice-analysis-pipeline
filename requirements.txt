@@ -1,13 +1,15 @@
-# CPU-only PyTorch (saves ~1GB vs full CUDA build)
+# CPU-only PyTorch (saves ~1GB vs full CUDA build, same quality)
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch
 torchvision
 
-# PDF extraction (uses torch for ML models)
+# PDF extraction
 docling>=2.3.0
 
-# OCR fallback (lightweight, ONNX-based — no PaddlePaddle needed)
+# OCR engines (Docling primary, PaddleOCR fallback)
 opencv-python-headless>=4.8.0
+paddlepaddle>=2.6.0
+paddleocr>=2.9.0
 rapidocr>=3.0.0
 
 # File watcher
