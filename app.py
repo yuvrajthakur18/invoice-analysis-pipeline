@@ -23,24 +23,56 @@ st.set_page_config(
 )
 
 # ── Load API key from Streamlit secrets or .env ──────────────────────────────
-def _load_api_key() -> None:
-    """Inject GEMINI_API_KEY into the environment from Streamlit secrets or .env."""
-    if os.environ.get("GEMINI_API_KEY"):
-        return
+def _load_default_api_key() -> str:
+    """Get the default GEMINI_API_KEY from Streamlit secrets or .env."""
+    # 1) Already in environment
+    key = os.environ.get("GEMINI_API_KEY", "")
+    if key:
+        return key
+    # 2) Streamlit secrets (used on Streamlit Cloud)
     try:
         key = st.secrets.get("GEMINI_API_KEY", "")
         if key:
-            os.environ["GEMINI_API_KEY"] = key
-            return
+            return key
     except Exception:
         pass
+    # 3) .env file (local dev)
     try:
         from dotenv import load_dotenv  # type: ignore[import-untyped]
         load_dotenv()
+        key = os.environ.get("GEMINI_API_KEY", "")
+        if key:
+            return key
     except ImportError:
         pass
+    return ""
 
-_load_api_key()
+_default_key = _load_default_api_key()
+
+# ── Sidebar: optional user API key override ──────────────────────────────────
+with st.sidebar:
+    st.markdown("### ⚙️ Settings")
+    st.markdown("---")
+    st.markdown("**Gemini API Key**")
+    if _default_key:
+        st.success("✅ Default API key is configured.")
+        st.markdown("_If you encounter rate limits, you can provide your own key below._")
+    else:
+        st.warning("⚠️ No default API key found. Please enter one below.")
+
+    user_key = st.text_input(
+        "Your Gemini API Key (optional)",
+        type="password",
+        placeholder="Paste your key here...",
+        help="Get a free key at https://aistudio.google.com/apikey",
+    )
+    if user_key:
+        st.info("🔑 Using your custom API key for this session.")
+
+# Set the active key (user override takes priority)
+_active_key = user_key.strip() if user_key else _default_key
+if _active_key:
+    os.environ["GEMINI_API_KEY"] = _active_key
 
 
 # ── Custom CSS ───────────────────────────────────────────────────────────────
