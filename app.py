@@ -247,7 +247,7 @@ def render_results(result: dict[str, Any], filename: str, log_messages: list[str
             df = pd.DataFrame(rows)
             st.dataframe(
                 df,
-                width=None,
+                width="stretch",
                 hide_index=True,
                 height=min(500, 40 + len(rows) * 35),
                 column_config={
