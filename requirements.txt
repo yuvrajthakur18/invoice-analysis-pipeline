@@ -2,8 +2,10 @@
 docling>=2.3.0
 
 # OCR fallback
+opencv-python-headless>=4.8.0
 paddlepaddle>=2.6.0
 paddleocr>=2.9.0
+rapidocr-onnxruntime>=1.3.0
 
 # File watcher
 watchdog>=4.0.0
