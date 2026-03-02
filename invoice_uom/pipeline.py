@@ -165,10 +165,15 @@ def process_pdf(
                 raw_items, items_debug2 = extract_line_items(extraction)
                 if raw_items:
                     items_debug["layout_fallback_success"] = True
+                    _status(f"pdfplumber Fallback Success! Found {len(raw_items)} items.")
+                else:
+                    _status(f"pdfplumber layout was generated, but line_items regex still found 0 items. Layout Length: {len(extraction.get('layout_text', ''))}")
                 items_debug.update(items_debug2)
             except ImportError:
+                _status("ERROR: pdfplumber is not installed in the environment!")
                 logger.warning("pdfplumber not installed")
             except Exception as exc:
+                _status(f"ERROR during pdfplumber extraction: {exc}")
                 logger.warning("pdfplumber extraction failed: %s", exc)
 
         debug["stages"]["line_items"] = items_debug
