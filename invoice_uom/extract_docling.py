@@ -97,29 +97,10 @@ def extract_with_docling(pdf_path: Path) -> dict[str, Any]:
         len(tables), len(text_blocks),
     )
     
-    # Always extract layout for LLM and regex fallbacks, because docling 
-    # might find 1 garbage table and still fail to extract line items.
-    layout_text = None
-    try:
-        import pdfplumber  # type: ignore[import-untyped]
-        logger.info("Extracting visual layout with pdfplumber for fallback parsing.")
-        with pdfplumber.open(pdf_path) as pdf:
-            pages_text = []
-            for page in pdf.pages:
-                pt = page.extract_text(layout=True)
-                if pt:
-                    pages_text.append(pt)
-            layout_text = "\n\n".join(pages_text)
-    except ImportError:
-        logger.warning("pdfplumber not installed, skipping layout extraction fallback")
-    except Exception as exc:
-        logger.warning("pdfplumber layout extraction failed: %s", exc)
-
     return {
         "tables": tables,
         "structured_tables": structured_tables,
         "text_blocks": text_blocks,
-        "layout_text": layout_text,
         "method": "docling"
     }
 

@@ -153,6 +153,24 @@ def process_pdf(
         _status("Parsing tables into structured line items...")
         # ── Stage 2: line items ──────────────────────────────────────────
         raw_items, items_debug = extract_line_items(extraction)
+        
+        if not raw_items:
+            _status("Running fallback extraction with pdfplumber (visual layout preservation)...")
+            try:
+                import pdfplumber  # type: ignore[import-untyped]
+                with pdfplumber.open(pdf_path) as pdf:
+                    pages_text = [p.extract_text(layout=True) for p in pdf.pages if p.extract_text(layout=True)]
+                    extraction["layout_text"] = "\n\n".join(pages_text)
+                
+                raw_items, items_debug2 = extract_line_items(extraction)
+                if raw_items:
+                    items_debug["layout_fallback_success"] = True
+                items_debug.update(items_debug2)
+            except ImportError:
+                logger.warning("pdfplumber not installed")
+            except Exception as exc:
+                logger.warning("pdfplumber extraction failed: %s", exc)
+
         debug["stages"]["line_items"] = items_debug
         logger.info("Extracted %d raw line item(s)", len(raw_items))
 
