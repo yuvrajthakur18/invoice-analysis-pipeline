@@ -518,19 +518,23 @@ def _try_llm_extraction(
     # Build raw text from all text blocks + any table content
     text_parts: list[str] = []
     
-    # Prioritise the semantic HTML / formatting from Docling for the LLM
-    structured = extraction.get("structured_tables", [])
-    if structured:
-        for t in structured:
-            text_parts.append(str(t))
+    # Prioritize pdfplumber perfectly aligned visual text if docling failed
+    if extraction.get("layout_text"):
+        text_parts.append(extraction["layout_text"])
     else:
-        # Fallback to flattening the 2D arrays
-        for table in extraction.get("tables", []):
-            for row in table:
-                text_parts.append(" | ".join(str(c) for c in row))
+        # Prioritise the semantic HTML / formatting from Docling for the LLM
+        structured = extraction.get("structured_tables", [])
+        if structured:
+            for t in structured:
+                text_parts.append(str(t))
+        else:
+            # Fallback to flattening the 2D arrays
+            for table in extraction.get("tables", []):
+                for row in table:
+                    text_parts.append(" | ".join(str(c) for c in row))
 
-    for block in extraction.get("text_blocks", []):
-        text_parts.append(block)
+        for block in extraction.get("text_blocks", []):
+            text_parts.append(block)
 
     raw_text = "\n".join(text_parts)
     if not raw_text.strip():

@@ -362,11 +362,14 @@ if uploaded_files:
             render_results(result, uploaded_file.name, log_messages)
         else:
             st.error(f"Processing failed for **{uploaded_file.name}**.")
-            # Still show logs for failed files
+            # Still show logs for failed files without an expander
             if log_messages:
-                with st.expander(f"📝 **Processing Logs** ({len(log_messages)} entries)", expanded=True):
-                    for log in log_messages:
-                        st.markdown(f"• {log}")
+                st.markdown(f"**Processing Logs** ({len(log_messages)} entries)")
+                for log in log_messages:
+                    if log.startswith("ERROR:"):
+                        st.error(log)
+                    else:
+                        st.text(f"• {log}")
 
         st.markdown("---")
 

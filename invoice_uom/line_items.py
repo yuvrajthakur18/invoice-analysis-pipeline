@@ -315,6 +315,19 @@ def extract_line_items_from_text(
             return items, debug_info
 
     # ── Step 2: regex line matching ─────────────────────────────────
+    # Look for Fastenal borderless pattern first
+    # e.g.: "1      2     2       0   SG Model 31 H3 Eyewe 144819 1050072 195.0000 3.90"
+    fastenal_pat = re.compile(
+        r"^(?P<line_no>\d+)\s+"                 # Line No: "1"
+        r"(?P<qty_ord>\d+(?:\.\d+)?)\s+"        # Qty Ordered: "2"
+        r"(?P<qty_ship>\d+(?:\.\d+)?)\s+"       # Qty Shipped: "2"
+        r"(?P<qty_bo>\d+(?:\.\d+)?)\s+"         # Qty Backordered: "0"
+        r"(?P<desc>.+?)\s+"                     # Description: "SG Model 31 H3 Eyewe"
+        r"(?P<sku>\w[\w\-]+(?:(?:[\s\w\-]+)?\w)?)\s+" # Part No: "144819" (sometimes there's another Control No before or after)
+        r"(?P<price_per_hund>\d{1,3}(?:,\d{3})*\.\d{2,4})\s+" # Price / Hundred: "195.0000"
+        r"(?P<amount>\d{1,3}(?:,\d{3})*\.\d{2})$"            # Amount: "3.90"
+    )
+
     line_pat = re.compile(
         r"^(?P<desc>.{10,}?)\s+"
         r"(?P<qty>\d+(?:\.\d+)?)\s+"
@@ -330,6 +343,44 @@ def extract_line_items_from_text(
             continue
 
         if _is_non_item(line):
+            continue
+
+        m_fastenal = fastenal_pat.search(line)
+        if m_fastenal:
+            desc = _clean_cell_value(m_fastenal.group("desc"))
+            qty = _parse_number(m_fastenal.group("qty_ship"))
+            
+            # The part number logic for fastenal is tricky because it has Control No and Part No.
+            # We take the last word block before the price as the SKU/PartNo
+            sku_match = m_fastenal.group("sku")
+            sku_parts = sku_match.split()
+            sku = sku_parts[-1] if sku_parts else None
+            
+            # If the description accidentally caught the control number, clean it
+            if len(sku_parts) > 1:
+                desc = desc + " " + " ".join(sku_parts[:-1])
+
+            amount = _parse_number(m_fastenal.group("amount"))
+            
+            # Calculate unit price since Fastenal gives "Price / Hundred" 
+            # Or we can just calculate from Amount / Qty 
+            unit_price = None
+            if qty and qty > 0 and amount is not None:
+                unit_price = round(amount / qty, 4)
+
+            debug_info["matched_lines"].append(line)
+
+            item: dict[str, Any] = {
+                "item_description": desc,
+                "quantity": qty,
+                "uom_raw": "EA", # Fastenal typically implies EA or PC for these
+                "unit_price": unit_price,
+                "amount": amount,
+                "sku": sku,
+                "manufacturer_part_number": None,
+            }
+            all_items.append(item)
+            prev_item = item
             continue
 
         m = line_pat.match(line)  # type: ignore
@@ -465,6 +516,13 @@ def extract_line_items(extraction: dict[str, Any]) -> tuple[list[dict[str, Any]]
         items, tbl_debug = extract_line_items_from_tables(tables)
         if items:
             debug_info["method"] = "tables"
+            debug_info.update(tbl_debug)
+            return items, debug_info
+
+    if extraction.get("layout_text"):
+        items, tbl_debug = extract_line_items_from_text([extraction["layout_text"]])
+        if items:
+            debug_info["method"] = "layout_fallback"
             debug_info.update(tbl_debug)
             return items, debug_info
 
