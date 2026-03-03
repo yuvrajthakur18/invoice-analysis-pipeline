@@ -332,17 +332,31 @@ def _enrich_item(
 ) -> dict[str, Any]:
     """Enrich a single raw item: UOM parsing, price, lookup, scoring."""
     # Parse UOM from all available text
-    uom_text_sources: list[str] = []
-    if raw.get("uom_raw"):
-        uom_text_sources.append(raw["uom_raw"])
-    if raw.get("item_description"):
-        uom_text_sources.append(raw["item_description"])
-
+    # Strategy: check uom_raw first, then description.  BUT if uom_raw
+    # resolves to a generic "EA" (pack_qty=1), still check the description
+    # for a richer pack pattern (e.g. "5Ct", "25/CS").
     uom_result = None
-    for src in uom_text_sources:
-        uom_result = parse_uom_and_pack(src)
-        if uom_result.original_uom:
-            break
+
+    # 1) Try uom_raw column first
+    if raw.get("uom_raw"):
+        uom_result = parse_uom_and_pack(raw["uom_raw"])
+        if not uom_result.original_uom:
+            uom_result = None
+
+    # 2) Always try description – it may contain richer info
+    desc_result = None
+    if raw.get("item_description"):
+        desc_result = parse_uom_and_pack(raw["item_description"])
+        if not desc_result.original_uom:
+            desc_result = None
+
+    # 3) Pick the better result: prefer description if it found a real
+    #    pack quantity and the uom_raw was just generic "EA".
+    if desc_result and desc_result.detected_pack_quantity and desc_result.detected_pack_quantity > 1:
+        # Description has a specific pack pattern – use it
+        uom_result = desc_result
+    elif uom_result is None and desc_result is not None:
+        uom_result = desc_result
 
     if uom_result is None:
         from invoice_uom.uom_normalize import UOMParseResult
@@ -382,6 +396,7 @@ def _enrich_item(
             raw.get("item_description", ""),
             raw.get("sku"),
             raw.get("manufacturer_part_number"),
+            supplier_name,
         )
         if query_key and query_key in lookup_queries_done:
             # Reuse previous lookup result

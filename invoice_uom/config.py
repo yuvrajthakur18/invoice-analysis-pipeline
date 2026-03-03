@@ -134,9 +134,9 @@ SUPPLIER_ALIASES: dict[str, str] = {
 # ── LLM / rate-limit constants ──────────────────────────────────────────────
 GEMINI_MODEL = "gemini-2.5-flash"
 LLM_RPM = 7                     # max requests per minute
-LLM_RPD = 20                    # max requests per day
+LLM_RPD = 50                    # max requests per day
 LLM_MAX_RETRIES = 5             # retries on 429 / RESOURCE_EXHAUSTED
-LLM_MAX_CALLS_PER_PDF = 3       # budget cap per single PDF run
+LLM_MAX_CALLS_PER_PDF = 10      # budget cap per single PDF run
 LLM_TEMPERATURE = 0.0
 
 # ── confidence thresholds ───────────────────────────────────────────────────

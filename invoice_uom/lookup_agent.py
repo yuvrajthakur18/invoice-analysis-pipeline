@@ -176,7 +176,8 @@ class LookupAgent:
 
     @staticmethod
     def _build_query(
-        description: str, sku: str | None, mpn: str | None
+        description: str, sku: str | None, mpn: str | None,
+        supplier: str | None = None,
     ) -> str:
         """Build a normalised search query string."""
         if mpn and mpn.strip():
@@ -189,7 +190,11 @@ class LookupAgent:
         if len(cleaned) < 5:
             return ""
         # Truncate very long descriptions
-        return " ".join(cleaned.split()[:10])
+        query = " ".join(cleaned.split()[:10])
+        # Prepend supplier for more targeted results
+        if supplier and supplier.strip() and supplier.strip().lower() not in query.lower():
+            query = f"{supplier.strip()} {query}"
+        return query
 
     @staticmethod
     def _search(query: str, max_results: int = 3) -> list[str]:
