@@ -47,6 +47,13 @@ class TestCleanOCR:
         ("50 EACH",          "EA",   50),
         ("CS 12",            "CS",   12),
 
+        # NNNCt / NNNCount patterns (Fastenal style)
+        ("5Ct",              "CT",   5),
+        ("100Ct",            "CT",   100),
+        ("10Count",          "CT",   10),
+        ("LL-5-30 EarPlug 5Ct 132403", "CT", 5),
+        ("ClnngTowelette100Ct 131852", "CT", 100),
+
         # Standalone UOM (no pack qty)
         ("EA",               "EA",   1),      # EA implies pack_qty=1
         ("ROLL",             "RL",   None),   # pack UOM, qty unknown
@@ -65,6 +72,7 @@ class TestCleanOCR:
         "25/CS", "100/CASE", "12/BX", "PK10", "PACK6",
         "case_of_12", "box_of_24", "10_per_pack", "6_per_case",
         "1000_EA", "50_EACH", "CS_12",
+        "5Ct", "100Ct", "10Count", "fastenal_earplug_5ct", "fastenal_towelette_100ct",
         "standalone_EA", "standalone_ROLL",
         "ocr_P_K10", "clean_25_CS", "ocr_EA_dot", "ocr_C4SE",
         "empty", "no_uom",

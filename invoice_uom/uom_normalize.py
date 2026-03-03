@@ -65,6 +65,10 @@ _PACK_PATTERNS: list[tuple[re.Pattern[str], int, int]] = [
     (re.compile(r"\b(\d+)\s+(EA|EACH|UNIT|PC|PCS|PIECE|PIECES)\b", re.I), 1, 2),
     # "CS 12" – UOM followed by qty
     (re.compile(r"\b(CS|CASE|BX|BOX|PK|PACK|PKG)\s+(\d+)\b", re.I), 2, 1),
+    # "5Ct", "100Ct", "100CT", "10Count" – digits directly followed by ct/count
+    # Use lookbehind (?<!\d) instead of \b because \b won't fire between
+    # letter and digit (both are \w), e.g. "Towelette100Ct".
+    (re.compile(r"(?<!\d)(\d+)\s*(CT|Count)\b", re.I), 1, 2),
 ]
 
 # Standalone UOM token (no pack qty)
